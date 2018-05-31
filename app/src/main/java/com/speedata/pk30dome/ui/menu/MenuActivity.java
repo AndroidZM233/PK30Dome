@@ -6,11 +6,13 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -40,12 +42,11 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 
-import speedata.com.blelib.bean.LWHData;
 import xyz.reginer.baseadapter.CommonRvAdapter;
 
 
 public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresenter>
-        implements MenuContract.View, View.OnClickListener, CommonRvAdapter.OnItemClickListener {
+        implements MenuContract.View, View.OnClickListener {
 
     private TextView device_name;
     private TextView device_address;
@@ -54,12 +55,9 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
     private TextView mTvL;
     private TextView mTvW;
     private TextView mTvH;
-    private RecyclerView rv_content;
-    private List<Data> datas;
-    private TextView tv_countNum;
-    private RVAdapter mAdapter;
-    private LinearLayoutManager layoutManager;
+    private TextView mTvG;
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,18 +99,18 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
 
         } else if ("Save6DataErr".equals(type)) {
             Toast.makeText(MenuActivity.this, (String) msg, Toast.LENGTH_SHORT).show();
-        } else if ("Save6DataSuccess".equals(type)) {
-            MyApp.getInstance().writeCharacteristic6("AA0A020100000000000000000000000000000200");
-            Toast.makeText(MenuActivity.this, (String) msg, Toast.LENGTH_SHORT).show();
-            datas.clear();
-            List<Data> dataList = MyApp.getDaoInstant().getDataDao().loadAll();
-            datas.addAll(dataList);
-            handler.sendMessage(handler.obtainMessage());
-        } else if ("LWHData".equals(type)) {
-            LWHData lwhData = (LWHData) msg;
-            mTvH.setText("H:" + lwhData.H);
-            mTvL.setText("L:" + lwhData.L);
-            mTvW.setText("W:" + lwhData.W);
+        } else if ("L".equals(type)) {
+            String string = (String) msg;
+            mTvL.setText("L:" + string);
+        } else if ("W".equals(type)) {
+            String string = (String) msg;
+            mTvW.setText("W:" + string);
+        } else if ("H".equals(type)) {
+            String string = (String) msg;
+            mTvH.setText("H:" + string);
+        } else if ("G".equals(type)) {
+            String string = (String) msg;
+            mTvG.setText("G:" + string);
         }
 
     }
@@ -141,44 +139,14 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
         mTvL = findViewById(R.id.tv_l);
         mTvW = findViewById(R.id.tv_w);
         mTvH = findViewById(R.id.tv_h);
-        rv_content = findViewById(R.id.rv_content);
-        tv_countNum = findViewById(R.id.tv_countNum);
-        datas = MyApp.getDaoInstant().getDataDao().loadAll();
-        tv_countNum.setText("数据总数：" + datas.size());
-        initRV();
+        mTvG = findViewById(R.id.tv_g);
     }
-
-    private void initRV() {
-        mAdapter = new RVAdapter(getApplicationContext(), R.layout.info_show, datas);
-        rv_content.addItemDecoration(new DividerItemDecoration(getApplicationContext(),
-                DividerItemDecoration.VERTICAL));
-        layoutManager = new LinearLayoutManager(getApplicationContext());
-        layoutManager.setStackFromEnd(true);//列表再底部开始展示，反转后由上面开始展示
-        layoutManager.setReverseLayout(true);//列表翻转
-        rv_content.setLayoutManager(layoutManager);
-        rv_content.setAdapter(mAdapter);
-        mAdapter.setOnItemClickListener(this);
-    }
-
-
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            mAdapter.notifyDataSetChanged();
-        }
-    };
-
 
     @Override
     public void onClick(View v) {
 
     }
 
-    @Override
-    public void onItemClick(RecyclerView.ViewHolder viewHolder, View view, int position) {
-
-    }
 
     private long mkeyTime = 0;
 

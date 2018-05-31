@@ -11,15 +11,12 @@ import android.widget.Toast;
 
 import com.speedata.pk30dome.bean.DaoMaster;
 import com.speedata.pk30dome.bean.DaoSession;
-import com.speedata.pk30dome.bean.Data;
 import com.speedata.pk30dome.bean.MsgEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
 
 import speedata.com.blelib.base.BaseBleApplication;
-import speedata.com.blelib.bean.LWHData;
-import speedata.com.blelib.bean.PK20Data;
 import speedata.com.blelib.service.BluetoothLeService;
 
 import static speedata.com.blelib.service.BluetoothLeService.ACTION_DATA_AVAILABLE;
@@ -87,7 +84,7 @@ public class MyApp extends BaseBleApplication {
     // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.与GATT服务器断开连接
     // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.发现了GATT服务
     // ACTION_DATA_AVAILABLE: 数据通知
-    // （1、EXTRA_DATA 设置回复信息 2、NOTIFICATION_DATA_LWH 长宽高测量信息
+    // （1、EXTRA_DATA 设置回复信息 2、NOTIFICATION_DATA_LWHG 长宽高重测量信息
     // 3、NOTIFICATION_DATA 长宽高体积条码测量信息 4、NOTIFICATION_DATA_ERR 错误信息）
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -103,39 +100,31 @@ public class MyApp extends BaseBleApplication {
             } else if (ACTION_DATA_AVAILABLE.equals(action)) {
                 String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
                 if (TextUtils.isEmpty(data)) {
-                    LWHData lwh = intent.getParcelableExtra(BluetoothLeService.NOTIFICATION_DATA_LWH);
-                    if (lwh != null) {
-                        EventBus.getDefault().post(new MsgEvent("LWHData", lwh));
-                    } else {
-                        String dataERR = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_ERR);
-                        if (TextUtils.isEmpty(dataERR)) {
-                            PK20Data mPK20Data = intent.getParcelableExtra(BluetoothLeService.NOTIFICATION_DATA);
-                            Data mData = new Data();
-                            mData.setWangDian(mPK20Data.wangDian);
-                            mData.setCenter(mPK20Data.center);
-                            mData.setMuDi(mPK20Data.muDi);
-                            mData.setLiuCheng(mPK20Data.liuCheng);
-                            mData.setL(mPK20Data.L);
-                            mData.setW(mPK20Data.W);
-                            mData.setH(mPK20Data.H);
-                            mData.setG(mPK20Data.G);
-                            mData.setV(mPK20Data.V);
-                            mData.setTime(mPK20Data.time);
-                            mData.setBarCode(mPK20Data.barCode);
-                            mData.setZhu(mPK20Data.zhu);
-                            mData.setZi(mPK20Data.zi);
-                            mData.setBiaoJi(mPK20Data.biaoJi);
-                            mData.setBiaoshi(mPK20Data.biaoshi);
-                            mData.setMac(mPK20Data.mac);
-                            mData.setName(mPK20Data.name);
-                            MyApp.getDaoInstant().getDataDao().insertOrReplace(mData);
-                            EventBus.getDefault().post(new MsgEvent("Save6DataSuccess", "数据存储成功"));
-                        } else {
-                            EventBus.getDefault().post(new MsgEvent("Save6DataErr", dataERR));
+                    String dataERR = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_ERR);
+                    if (TextUtils.isEmpty(dataERR)) {
+                        String l = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_L);
+                        if (!TextUtils.isEmpty(l)) {
+                            EventBus.getDefault().post(new MsgEvent("L", l));
                         }
-                    }
+                        String w = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_W);
+                        if (!TextUtils.isEmpty(w)) {
+                            EventBus.getDefault().post(new MsgEvent("W", w));
+                        }
+                        String h = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_H);
+                        if (!TextUtils.isEmpty(h)) {
+                            EventBus.getDefault().post(new MsgEvent("H", h));
+                        }
+                        String g = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_G);
+                        if (!TextUtils.isEmpty(g)) {
+                            EventBus.getDefault().post(new MsgEvent("G", g));
+                        }
 
+                    } else {
+                        EventBus.getDefault().post(new MsgEvent("Save6DataErr", dataERR));
+                    }
                 }
+
+
             }
         }
     };

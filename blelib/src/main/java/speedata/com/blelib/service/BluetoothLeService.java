@@ -17,18 +17,14 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import speedata.com.blelib.bean.LWHData;
-import speedata.com.blelib.bean.PK20Data;
 import speedata.com.blelib.bean.SampleGattAttributes;
-import speedata.com.blelib.utils.DataManageUtils;
+import speedata.com.blelib.utils.PK30DataUtils;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -54,7 +50,6 @@ public class BluetoothLeService extends Service {
     public final static String ACTION_DATA_AVAILABLE = "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
     public final static String NOTIFICATION_DATA = "com.example.bluetooth.le.NOTIFICATION_DATA";
-    public final static String NOTIFICATION_DATA_LWH = "com.example.bluetooth.le.NOTIFICATION_DATA_LWH";
     public final static String NOTIFICATION_DATA_ERR = "com.example.bluetooth.le.NOTIFICATION_DATA_ERR";
 
     public final static UUID UUID_HEART_RATE_MEASUREMENT = UUID.fromString(SampleGattAttributes.HEART_RATE_MEASUREMENT);
@@ -133,7 +128,6 @@ public class BluetoothLeService extends Service {
             }
         }
     };
-    private List<byte[]> mByteList = new ArrayList<>();
 
     public void wirteCharacteristic(BluetoothGattCharacteristic characteristic) {
 
@@ -173,70 +167,6 @@ public class BluetoothLeService extends Service {
             sendBroadcast(intent);
         } else if ("0000fff6-0000-1000-8000-00805f9b34fb".equals(characteristic.getUuid().toString())) {
             final byte[] data = characteristic.getValue();
-            if (data[3] == (byte) 0xB1 && data[0] == (byte) 0xAA && data[1] == (byte) 0x0A) {
-                mByteList.clear();
-            }
-            mByteList.add(data);
-            if (mByteList.size() == 9) {
-                final List<byte[]> mByteNewList = new ArrayList<>();
-                mByteNewList.addAll(mByteList);
-                mByteList.clear();
-                byte[] bytes0 = mByteNewList.get(0);
-                for (int i = 0; i < mByteNewList.size(); i++) {
-                    String bytesToHexString = DataManageUtils.bytesToHexString(mByteNewList.get(i));
-                    Log.d("PK20", "broadcastUpdate: " + bytesToHexString);
-                }
-                int jiaoYan6 = DataManageUtils.jiaoYan6(mByteNewList.get(0), mByteNewList.get(8));
-                if (jiaoYan6 != 0) {
-                    intent.putExtra(NOTIFICATION_DATA_ERR, "信道6数据有误");
-                    sendBroadcast(intent);
-                    return;
-                }
-                StringBuilder stringBuffer = new StringBuilder();
-                if (bytes0[3] != (byte) 0xB1) {
-                    stringBuffer.append("B1");
-                }
-                if (mByteNewList.get(1)[0] != (byte) 0xB2) {
-                    stringBuffer.append("B2");
-                }
-                if (mByteNewList.get(2)[0] != (byte) 0xB3) {
-                    stringBuffer.append("B3");
-                }
-                if (mByteNewList.get(3)[0] != (byte) 0xB4) {
-                    stringBuffer.append("B4");
-                }
-                if (mByteNewList.get(4)[0] != (byte) 0xB5) {
-                    stringBuffer.append("B5");
-                }
-                if (mByteNewList.get(5)[0] != (byte) 0xB6) {
-                    stringBuffer.append("B6");
-                }
-                if (mByteNewList.get(6)[0] != (byte) 0xB7) {
-                    stringBuffer.append("B7");
-                }
-                if (mByteNewList.get(7)[0] != (byte) 0xB8) {
-                    stringBuffer.append("B8");
-                }
-                if (mByteNewList.get(8)[0] != (byte) 0xB9) {
-                    stringBuffer.append("B9");
-                }
-                if (TextUtils.isEmpty(stringBuffer.toString())) {
-                    mThread m = new mThread(mByteNewList, characteristic, intent);
-                    m.start();
-                } else {
-                    String toString = stringBuffer.toString();
-                    int length = toString().length() / 2 + 1;
-                    StringBuilder zero = new StringBuilder();
-                    for (int i = 0; i < 15 - length + 1; i++) {
-                        zero.append("00");
-                    }
-                    String jiaoYan = DataManageUtils.getJiaoYan(toString.substring(0, 2)
-                            , toString.substring(toString.length() - 2, toString.length()));
-                    zero.append(jiaoYan);
-                    intent.putExtra(NOTIFICATION_DATA_ERR, "信道6数据部分重发");
-                    sendBroadcast(intent);
-                }
-            }
         } else {
             // For all other profiles, writes the data formatted in HEX.
             // 对于所有其他配置文件，用十六进制格式编写数据。
@@ -246,11 +176,8 @@ public class BluetoothLeService extends Service {
                 for (byte byteChar : data) {
                     stringBuilder.append(String.format("%02X ", byteChar));
                 }
-                if (data[1] == (byte) 0x14) {
-                    int ff = DataManageUtils.jiaoYanLWHData(stringBuilder.toString(), "FF", "14");
-                    if (ff == 0) {
-                        sendLWHData(intent, data);
-                    }
+                if (data[1] == (byte) 0x0A || data[1] == (byte) 0x0B || data[1] == (byte) 0x0C || data[1] == (byte) 0x0D) {
+                    sendLWHGData(intent, data);
                 } else {
                     intent.putExtra(EXTRA_DATA, stringBuilder.toString());
                     sendBroadcast(intent);
@@ -259,168 +186,23 @@ public class BluetoothLeService extends Service {
         }
     }
 
+    public final static String NOTIFICATION_DATA_L = "com.example.bluetooth.le.NOTIFICATION_DATA_L";
+    public final static String NOTIFICATION_DATA_W = "com.example.bluetooth.le.NOTIFICATION_DATA_W";
+    public final static String NOTIFICATION_DATA_H = "com.example.bluetooth.le.NOTIFICATION_DATA_H";
+    public final static String NOTIFICATION_DATA_G = "com.example.bluetooth.le.NOTIFICATION_DATA_G";
+
     //发送信道3长宽高信息
-    private void sendLWHData(Intent intent, byte[] data) {
-        String itemW = "";
-        String itemH = "";
-        String itemL = "";
-        String length = DataManageUtils.getLWH(data, DataManageUtils.L3);
-        int l = 0;
-        if (!length.equals("ffff")) {
-            l = Integer.parseInt(length, 16);
-            double result = (double) l / 10;
-            itemL = result + "";
-        }
-
-        String wStr = DataManageUtils.getLWH(data, DataManageUtils.W3);
-        int w = 0;
-        if (!wStr.equals("ffff")) {
-            w = Integer.parseInt(wStr, 16);
-            double result = (double) w / 10;
-            itemW = result + "";
-        }
-
-        String hStr = DataManageUtils.getLWH(data, DataManageUtils.H3);
-        int h = 0;
-        if (!hStr.equals("ffff")) {
-            h = Integer.parseInt(hStr, 16);
-            double result = (double) h / 10;
-            itemH = result + "";
-        }
-
-        LWHData lwhData = new LWHData(itemL, itemW, itemH);
-        intent.putExtra(NOTIFICATION_DATA_LWH, lwhData);
-        sendBroadcast(intent);
-    }
-
-
-    class mThread extends Thread {
-        List<byte[]> mByteNewList;
-        BluetoothGattCharacteristic characteristic;
-        Intent intent;
-
-        public mThread(List<byte[]> mByteNewList, BluetoothGattCharacteristic characteristic, Intent intent) {
-            this.mByteNewList = mByteNewList;
-            this.characteristic = characteristic;
-            this.intent = intent;
-        }
-
-        @Override
-        public void run() {
-            String expressCode = DataManageUtils.getExpressCode(mByteNewList.get(3), mByteNewList.get(4));
-            String barCode = "";
-            if (!"ffffffffffffffffffffffffffffffffffffffff".equals(expressCode)) {
-                barCode = DataManageUtils.convertHexToString(expressCode).replace("\u0000", "");
-            }
-
-            String branchCode = DataManageUtils.getBranchCode(mByteNewList.get(0));
-            String wangDian = "";
-            if (!branchCode.equals("ffffffffffffffffffff")) {
-                wangDian = DataManageUtils.convertHexToString(branchCode).replace("\u0000", "");
-            }
-
-            String centerCode = DataManageUtils.getCenterCode(mByteNewList.get(0), mByteNewList.get(1));
-            String center = "";
-            if (!centerCode.equals("ffffffffffffffffffff")) {
-                center = DataManageUtils.convertHexToString(centerCode).replace("\u0000", "");
-            }
-
-            String muDiCode = DataManageUtils.getMuDiCode(mByteNewList.get(1));
-            String muDi = "";
-            if (!muDiCode.equals("ffffffffffffffffffff")) {
-                muDi = DataManageUtils.convertHexToString(muDiCode).replace("\u0000", "");
-            }
-
-            String use = DataManageUtils.getUse(mByteNewList.get(1));
-            String liuCheng = DataManageUtils.convertHexToString(use);
-
-            String mac = DataManageUtils.getMac(mByteNewList.get(6), mByteNewList.get(7));
-            String identify = DataManageUtils.getIdentify(mByteNewList.get(7));
-            String itemL = "";
-            String length = DataManageUtils.getLWHG(mByteNewList.get(2), DataManageUtils.L);
-            int l = 0;
-            if (!length.equals("ffff")) {
-                l = Integer.parseInt(length, 16);
-                double result = (double) l / 10;
-                itemL = result + "";
-            }
-
-            String itemW = "";
-            String itemH = "";
-            String itemV = "";
-
-            if ("00".equals(identify)) {
-                //长宽高数据都有效(体积）
-                String wStr = DataManageUtils.getLWHG(mByteNewList.get(2), DataManageUtils.W);
-                int w = 0;
-                if (!wStr.equals("ffff")) {
-                    w = Integer.parseInt(wStr, 16);
-                    double result = (double) w / 10;
-                    itemW = result + "";
-                }
-
-                String hStr = DataManageUtils.getLWHG(mByteNewList.get(2), DataManageUtils.H);
-                int h = 0;
-                if (!hStr.equals("ffff")) {
-                    h = Integer.parseInt(hStr, 16);
-                    double result = (double) h / 10;
-                    itemH = result + "";
-                }
-
-                String vStr = DataManageUtils.getV(mByteNewList.get(2));
-                int v = 0;
-                if (!vStr.equals("ffffffff")) {
-                    v = Integer.parseInt(vStr, 16);
-                    double tijizhong = (double) v / 100;
-                    itemV = tijizhong + "";
-                }
-            }
-
-            String gStr = DataManageUtils.getLWHG(mByteNewList.get(2), DataManageUtils.G);
-            String itemG = "";
-            int g = 0;
-            if (!gStr.equals("ffff")) {
-                g = Integer.parseInt(gStr, 16);
-                itemG = g + "";
-            }
-
-            String time = DataManageUtils.getTime(mByteNewList.get(2));
-            String timeResult = "";
-            if (!time.equals("ffffffffffff")) {
-                timeResult = "20" + time.substring(10, 12) + "-"
-                        + time.substring(8, 10) + "-"
-                        + time.substring(6, 8) + " "
-                        + time.substring(4, 6) + ":"
-                        + time.substring(2, 4) + ":"
-                        + time.substring(0, 2);
-            }
-
-            String mainCode = DataManageUtils.getMainCode(mByteNewList.get(4), mByteNewList.get(5));
-            String zhu = "";
-            if (!mainCode.equals("ffffffffffffffffffffffffffffffffffffffff")) {
-                zhu = DataManageUtils.convertHexToString(mainCode).replace("\u0000", "");
-            }
-
-            String sonCode = DataManageUtils.getSonCode(mByteNewList.get(5), mByteNewList.get(6));
-            String zi = "";
-            if (!sonCode.equals("ffffffffffffffffffffffffffffffffffffffff")) {
-                zi = DataManageUtils.convertHexToString(sonCode).replace("\u0000", "");
-            }
-
-            String flag = DataManageUtils.getFlag(mByteNewList.get(8));
-            String biaoji = "";
-            if (!"ff".equals(flag)) {
-                biaoji = DataManageUtils.convertHexToString(flag);
-            }
-
-            String name = DataManageUtils.getName(mByteNewList.get(7), mByteNewList.get(8));
-            PK20Data mData = new PK20Data(barCode, wangDian, center, muDi, liuCheng, itemL, itemW, itemH, itemV
-                    , itemG, timeResult, zhu, zi, mac, identify, biaoji, name);
-
-            intent.putExtra(NOTIFICATION_DATA, mData);
+    private void sendLWHGData(Intent intent, byte[] data) {
+        boolean checkData = PK30DataUtils.checkData(data);
+        if (checkData) {
+            PK30DataUtils.analysisData(BluetoothLeService.this, intent, data);
+        } else {
+            intent.putExtra(NOTIFICATION_DATA_ERR, "数据错误");
             sendBroadcast(intent);
         }
+
     }
+
 
     public class LocalBinder extends Binder {
         public BluetoothLeService getService() {

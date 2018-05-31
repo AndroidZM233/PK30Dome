@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PK20Dome</string>
+    <string name="app_name">PK30Dome</string>
     <string name="ble_not_supported">你的手机不支持BLE</string>
     <string name="label_data">Data:</string>
     <string name="label_device_address">设备地址:</string>
