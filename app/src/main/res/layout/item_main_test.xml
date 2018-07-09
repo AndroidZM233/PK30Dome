@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="10dp">
+
+
+    <Button
+        android:id="@+id/btn_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="启动测量" />
+    <Button
+        android:id="@+id/btn_test_close"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="关闭测量" />
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="工作模式" />
+
+        <CheckBox
+            android:id="@+id/cb_scan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="条码扫描" />
+
+        <CheckBox
+            android:id="@+id/cb_length"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="测量长度" />
+
+        <CheckBox
+            android:id="@+id/cb_width"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="测量宽度" />
+
+        <CheckBox
+            android:id="@+id/cb_height"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="测量高度" />
+
+        <CheckBox
+            android:id="@+id/cb_weight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="测量重量" />
+
+    </LinearLayout>
+</LinearLayout>

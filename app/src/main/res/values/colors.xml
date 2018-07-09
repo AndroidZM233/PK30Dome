@@ -39,4 +39,6 @@
     <color name="green">#9fd4a1</color>
     <color name="blue">#488FCD</color>
     <color name="deep_red">#A22A29</color>
+
+    <color name="scan_bg">#7f000000</color>
 </resources>

@@ -1,4 +1,4 @@
-package com.speedata.pk30dome.bean;
+package com.liang.scancode;
 
 
 public class MsgEvent {

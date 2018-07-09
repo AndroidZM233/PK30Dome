@@ -8,28 +8,23 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
-import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.liang.scancode.MsgEvent;
 import com.speedata.pk30dome.MyApp;
 import com.speedata.pk30dome.R;
-import com.speedata.pk30dome.adapter.RVAdapter;
-import com.speedata.pk30dome.bean.Data;
-import com.speedata.pk30dome.bean.MsgEvent;
 import com.speedata.pk30dome.mvp.MVPBaseActivity;
 import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.PermissionListener;
@@ -42,7 +37,7 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 
-import xyz.reginer.baseadapter.CommonRvAdapter;
+import speedata.com.blelib.utils.PK30DataUtils;
 
 
 public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresenter>
@@ -56,6 +51,14 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
     private TextView mTvW;
     private TextView mTvH;
     private TextView mTvG;
+    private TextView tvSoftware;
+    private Button btnSoftware;
+    private TextView tvHardware;
+    private Button btnHardware;
+    private Spinner spModel;
+    private Button btnModel;
+    private TextView tvMac;
+    private Button btnMac;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     @Override
@@ -73,6 +76,7 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
         }
 
         initView();
+
     }
 
 
@@ -111,6 +115,29 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
         } else if ("G".equals(type)) {
             String string = (String) msg;
             mTvG.setText("G:" + string);
+        } else if ("MAC".equals(type)) {
+            tvMac.setText(msg + "");
+        } else if ("SOFT".equals(type)) {
+            tvSoftware.setText(msg + "");
+        } else if ("HARD".equals(type)) {
+            tvHardware.setText(msg + "");
+        } else if ("MODEL".equals(type)) {
+            String string = (String) msg;
+            switch (string) {
+                case "00":
+                    string = "模式更改为长度测量";
+                    break;
+                case "02":
+                    string = "模式更改为宽度测量";
+                    break;
+                case "03":
+                    string = "模式更改为高度测量";
+                    break;
+                case "01":
+                    string = "模式更改为重量测量";
+                    break;
+            }
+            Toast.makeText(this, string, Toast.LENGTH_SHORT).show();
         }
 
     }
@@ -122,6 +149,7 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
         btn_serviceStatus = findViewById(R.id.btn_serviceStatus);
 
         btn_serviceStatus.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
@@ -140,11 +168,37 @@ public class MenuActivity extends MVPBaseActivity<MenuContract.View, MenuPresent
         mTvW = findViewById(R.id.tv_w);
         mTvH = findViewById(R.id.tv_h);
         mTvG = findViewById(R.id.tv_g);
+        tvSoftware = (TextView) findViewById(R.id.tv_software);
+        btnSoftware = (Button) findViewById(R.id.btn_software);
+        btnSoftware.setOnClickListener(this);
+        tvHardware = (TextView) findViewById(R.id.tv_hardware);
+        btnHardware = (Button) findViewById(R.id.btn_hardware);
+        btnHardware.setOnClickListener(this);
+        spModel = (Spinner) findViewById(R.id.sp_model);
+        btnModel = (Button) findViewById(R.id.btn_model);
+        btnModel.setOnClickListener(this);
+        tvMac = findViewById(R.id.tv_mac);
+        btnMac = findViewById(R.id.btn_mac);
+        btnMac.setOnClickListener(this);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     @Override
     public void onClick(View v) {
-
+        switch (v.getId()) {
+            case R.id.btn_mac:
+                PK30DataUtils.getMac();
+                break;
+            case R.id.btn_software:
+                PK30DataUtils.getSoftware();
+                break;
+            case R.id.btn_hardware:
+                PK30DataUtils.getHardware();
+                break;
+            case R.id.btn_model:
+                PK30DataUtils.setModel(spModel.getSelectedItemPosition());
+                break;
+        }
     }
 
 

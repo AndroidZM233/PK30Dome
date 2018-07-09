@@ -20,10 +20,12 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.IllegalFormatCodePointException;
 import java.util.List;
 import java.util.UUID;
 
 import speedata.com.blelib.bean.SampleGattAttributes;
+import speedata.com.blelib.utils.DataManageUtils;
 import speedata.com.blelib.utils.PK30DataUtils;
 
 /**
@@ -167,22 +169,60 @@ public class BluetoothLeService extends Service {
             sendBroadcast(intent);
         } else if ("0000fff6-0000-1000-8000-00805f9b34fb".equals(characteristic.getUuid().toString())) {
             final byte[] data = characteristic.getValue();
+            String bytesToHexString = DataManageUtils.bytesToHexString(data);
+            Log.d("ZM", "信道6接收: " + bytesToHexString);
+            if (data == null) {
+                intent.putExtra(NOTIFICATION_DATA_ERR, "数据为空");
+                sendBroadcast(intent);
+                return;
+            }
+            boolean checkData = PK30DataUtils.checkData(data);
+            if (!checkData) {
+                PK30DataUtils.replyError(data);
+                intent.putExtra(NOTIFICATION_DATA_ERR, "数据错误" + bytesToHexString);
+                sendBroadcast(intent);
+                return;
+            }
+            if (data[1] == (byte) 0x0A || data[1] == (byte) 0x0B || data[1] == (byte) 0x0C || data[1] == (byte) 0x0D) {
+                sendLWHGData(intent, data);
+            } else if (data[1] == (byte) 0xD1) {
+                PK30DataUtils.analysisMac(BluetoothLeService.this, intent, data);
+            } else if (data[1] == (byte) 0xD2) {
+                PK30DataUtils.analysisSoftware(BluetoothLeService.this, intent, data);
+            } else if (data[1] == (byte) 0xD3) {
+                PK30DataUtils.analysisHardware(BluetoothLeService.this, intent, data);
+            } else if (data[1] == (byte) 0xD4 || data[1] == (byte) 0xD5 || data[1] == (byte) 0xD6 || data[1] == (byte) 0xD7) {
+                PK30DataUtils.analysisMdoel(BluetoothLeService.this, intent, data);
+            } else if (data[1] == (byte) 0xD8) {
+                PK30DataUtils.analysisShutdown(BluetoothLeService.this, intent, data);
+            } else if (data[1] == (byte) 0xD9) {
+                PK30DataUtils.analysisFengMing(BluetoothLeService.this, intent, data);
+            } else {
+                intent.putExtra(NOTIFICATION_DATA_ERR, "数据错误" + bytesToHexString);
+                sendBroadcast(intent);
+            }
         } else {
             // For all other profiles, writes the data formatted in HEX.
             // 对于所有其他配置文件，用十六进制格式编写数据。
             final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for (byte byteChar : data) {
-                    stringBuilder.append(String.format("%02X ", byteChar));
-                }
-                if (data[1] == (byte) 0x0A || data[1] == (byte) 0x0B || data[1] == (byte) 0x0C || data[1] == (byte) 0x0D) {
-                    sendLWHGData(intent, data);
-                } else {
-                    intent.putExtra(EXTRA_DATA, stringBuilder.toString());
-                    sendBroadcast(intent);
-                }
+            Log.d("ZM", "信道3接收: " + DataManageUtils.bytesToHexString(data));
+            if (data == null) {
+                intent.putExtra(NOTIFICATION_DATA_ERR, "数据为空");
+                sendBroadcast(intent);
+                return;
             }
+            boolean checkData = PK30DataUtils.checkData(data);
+            if (!checkData) {
+                intent.putExtra(NOTIFICATION_DATA_ERR, "数据错误");
+                sendBroadcast(intent);
+                return;
+            }
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for (byte byteChar : data) {
+                stringBuilder.append(String.format("%02X ", byteChar));
+            }
+            intent.putExtra(EXTRA_DATA, stringBuilder.toString());
+            sendBroadcast(intent);
         }
     }
 
@@ -190,17 +230,16 @@ public class BluetoothLeService extends Service {
     public final static String NOTIFICATION_DATA_W = "com.example.bluetooth.le.NOTIFICATION_DATA_W";
     public final static String NOTIFICATION_DATA_H = "com.example.bluetooth.le.NOTIFICATION_DATA_H";
     public final static String NOTIFICATION_DATA_G = "com.example.bluetooth.le.NOTIFICATION_DATA_G";
+    public final static String NOTIFICATION_DATA_MAC = "com.example.bluetooth.le.NOTIFICATION_DATA_MAC";
+    public final static String NOTIFICATION_DATA_SOFT = "com.example.bluetooth.le.NOTIFICATION_DATA_SOFT";
+    public final static String NOTIFICATION_DATA_HARD = "com.example.bluetooth.le.NOTIFICATION_DATA_HARD";
+    public final static String NOTIFICATION_DATA_MODEL = "com.example.bluetooth.le.NOTIFICATION_DATA_MODEL";
+    public final static String NOTIFICATION_SHUTDOWN = "com.example.bluetooth.le.NOTIFICATION_SHUTDOWN";
+    public final static String NOTIFICATION_FENGMING = "com.example.bluetooth.le.NOTIFICATION_FENGMING";
 
     //发送信道3长宽高信息
     private void sendLWHGData(Intent intent, byte[] data) {
-        boolean checkData = PK30DataUtils.checkData(data);
-        if (checkData) {
-            PK30DataUtils.analysisData(BluetoothLeService.this, intent, data);
-        } else {
-            intent.putExtra(NOTIFICATION_DATA_ERR, "数据错误");
-            sendBroadcast(intent);
-        }
-
+        PK30DataUtils.analysisData(BluetoothLeService.this, intent, data);
     }
 
 

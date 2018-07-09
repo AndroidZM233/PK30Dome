@@ -10,8 +10,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.support.annotation.RequiresApi;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -21,20 +23,22 @@ import speedata.com.blelib.service.BluetoothLeService;
 import speedata.com.blelib.utils.DataManageUtils;
 
 import static speedata.com.blelib.service.BluetoothLeService.ACTION_DATA_AVAILABLE;
+import static speedata.com.blelib.service.BluetoothLeService.ACTION_GATT_CONNECTED;
 import static speedata.com.blelib.service.BluetoothLeService.ACTION_GATT_DISCONNECTED;
 
 /**
  * Created by 张明_ on 2017/9/5.
  */
-
+@RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
 public class BaseBleApplication extends Application {
     public static final String TAG = "pk20";
     public static BluetoothLeService mBluetoothLeService = null;
     public static BluetoothGattCharacteristic mNotifyCharacteristic3 = null;
     public static BluetoothGattCharacteristic mNotifyCharacteristic6 = null;
-    public static String received = "AA0A020100000000000000000000000000000200";
     private String address = "";
     private String name = "";
+    private int tryAgainConnect = 0;
+    public boolean wantDisconnect = false;
 
     public void bindServiceAndRegisterReceiver(BluetoothDevice device) {
         address = device.getAddress();
@@ -64,6 +68,10 @@ public class BaseBleApplication extends Application {
         }
     };
 
+    public void wantDisconnectBle() {
+        wantDisconnect = true;
+    }
+
     // Handles various events fired by the Service.处理由服务触发的各种事件。
     // ACTION_GATT_CONNECTED: connected to a GATT server.连接到GATT服务器
     // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.与GATT服务器断开连接
@@ -75,15 +83,23 @@ public class BaseBleApplication extends Application {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            if (ACTION_GATT_DISCONNECTED.equals(action)) {
-                mBluetoothLeService.close();
-                mBluetoothLeService = null;
-                mNotifyCharacteristic3 = null;
-                mNotifyCharacteristic6 = null;
-                address = null;
-                name = null;
-                unregisterReceiver(mGattUpdateReceiver);
-                unbindService(mServiceConnection);
+            if (ACTION_GATT_CONNECTED.equals(action)) {
+                tryAgainConnect = 0;
+            } else if (ACTION_GATT_DISCONNECTED.equals(action)) {
+                tryAgainConnect++;
+                if (tryAgainConnect > 3 || wantDisconnect) {
+                    mBluetoothLeService.close();
+                    mBluetoothLeService = null;
+                    mNotifyCharacteristic3 = null;
+                    mNotifyCharacteristic6 = null;
+                    address = null;
+                    name = null;
+                    unregisterReceiver(mGattUpdateReceiver);
+                    unbindService(mServiceConnection);
+                } else {
+                    connect();
+                }
+
 
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 // Show all the supported services and characteristics on the user interface.
@@ -99,9 +115,9 @@ public class BaseBleApplication extends Application {
     };
 
 
-    public void writeCharacteristic3(String s) {
+    public static void writeCharacteristic3(byte[] data) {
         if (mNotifyCharacteristic3 != null) {
-            byte[] data = DataManageUtils.HexString2Bytes(s);//转十六进制
+//            byte[] data = DataManageUtils.HexString2Bytes(s);//转十六进制
             mNotifyCharacteristic3.setValue(data);
             mBluetoothLeService.wirteCharacteristic(mNotifyCharacteristic3);
         }
@@ -144,7 +160,9 @@ public class BaseBleApplication extends Application {
     }
 
     public void disconnect() {
-        mBluetoothLeService.disconnect();
+        if (mBluetoothLeService != null) {
+            mBluetoothLeService.disconnect();
+        }
     }
 
     public interface getBluetoothLeDataListener {

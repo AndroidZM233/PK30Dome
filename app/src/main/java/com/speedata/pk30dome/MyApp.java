@@ -6,12 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Toast;
 
+import com.liang.scancode.MsgEvent;
 import com.speedata.pk30dome.bean.DaoMaster;
 import com.speedata.pk30dome.bean.DaoSession;
-import com.speedata.pk30dome.bean.MsgEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -64,6 +67,7 @@ public class MyApp extends BaseBleApplication {
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void getDeviceName(BluetoothDevice device) {
         address = device.getAddress();
         name = device.getName();
@@ -87,16 +91,34 @@ public class MyApp extends BaseBleApplication {
     // （1、EXTRA_DATA 设置回复信息 2、NOTIFICATION_DATA_LWHG 长宽高重测量信息
     // 3、NOTIFICATION_DATA 长宽高体积条码测量信息 4、NOTIFICATION_DATA_ERR 错误信息）
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+        @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             if (ACTION_GATT_CONNECTED.equals(action)) {
-                Toast.makeText(MyApp.this, "连接成功", Toast.LENGTH_SHORT).show();
+                EventBus.getDefault().post(new MsgEvent("KP", false));
+                boolean cn = getApplicationContext().getResources().getConfiguration().locale.getCountry().equals("CN");
+                if (cn) {
+                    Toast.makeText(getApplicationContext(), "已连接", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getApplicationContext(), "Connection", Toast.LENGTH_LONG).show();
+                }
                 EventBus.getDefault().post(new MsgEvent("ServiceConnectedStatus", true));
             } else if (ACTION_GATT_DISCONNECTED.equals(action)) {
                 EventBus.getDefault().post(new MsgEvent("ServiceConnectedStatus", false));
-                unregisterReceiver(mGattUpdateReceiver);
-                Toast.makeText(MyApp.this, "断开连接", Toast.LENGTH_SHORT).show();
+                boolean cn = getApplicationContext().getResources().getConfiguration().locale.getCountry().equals("CN");
+                if (cn) {
+                    Toast.makeText(getApplicationContext(), "已断开", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(getApplicationContext(), "Disconnect", Toast.LENGTH_LONG).show();
+                }
+
+                Log.d("ZM_connect", "application里面的断开连接");
+                if (wantDisconnect) {
+                    unregisterReceiver(mGattUpdateReceiver);
+                } else {
+                    EventBus.getDefault().post(new MsgEvent("KP", true));
+                }
             } else if (ACTION_DATA_AVAILABLE.equals(action)) {
                 String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
                 if (TextUtils.isEmpty(data)) {
@@ -118,7 +140,31 @@ public class MyApp extends BaseBleApplication {
                         if (!TextUtils.isEmpty(g)) {
                             EventBus.getDefault().post(new MsgEvent("G", g));
                         }
+                        String mac = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_MAC);
+                        if (!TextUtils.isEmpty(mac)) {
+                            EventBus.getDefault().post(new MsgEvent("MAC", mac));
+                        }
+                        String soft = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_SOFT);
+                        if (!TextUtils.isEmpty(soft)) {
+                            EventBus.getDefault().post(new MsgEvent("SOFT", soft));
+                        }
+                        String hard = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_HARD);
+                        if (!TextUtils.isEmpty(hard)) {
+                            EventBus.getDefault().post(new MsgEvent("HARD", hard));
+                        }
+                        String model = intent.getStringExtra(BluetoothLeService.NOTIFICATION_DATA_MODEL);
+                        if (!TextUtils.isEmpty(model)) {
+                            EventBus.getDefault().post(new MsgEvent("MODEL", model));
+                        }
+                        String shutdown = intent.getStringExtra(BluetoothLeService.NOTIFICATION_SHUTDOWN);
+                        if (!TextUtils.isEmpty(shutdown)) {
+                            EventBus.getDefault().post(new MsgEvent("SHUTDOWN", shutdown));
+                        }
 
+                        String fengMing = intent.getStringExtra(BluetoothLeService.NOTIFICATION_FENGMING);
+                        if (!TextUtils.isEmpty(fengMing)) {
+                            EventBus.getDefault().post(new MsgEvent("FENGMING", fengMing));
+                        }
                     } else {
                         EventBus.getDefault().post(new MsgEvent("Save6DataErr", dataERR));
                     }
