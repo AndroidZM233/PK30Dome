@@ -6,16 +6,24 @@
     android:padding="10dp">
 
 
-    <Button
-        android:id="@+id/btn_test"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="启动测量" />
-    <Button
-        android:id="@+id/btn_test_close"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="关闭测量" />
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btn_test"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="启动测量" />
+
+        <Button
+            android:id="@+id/btn_test_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="关闭测量" />
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

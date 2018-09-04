@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -44,7 +45,6 @@ import java.util.Queue;
 import speedata.com.blelib.base.BaseBleApplication;
 import speedata.com.blelib.utils.DataManageUtils;
 import speedata.com.blelib.utils.PK30DataUtils;
-import speedata.com.blelib.utils.StringUtils;
 
 
 /**
@@ -87,6 +87,7 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
     private Button mBtnTestClose;
     private Button mBtnSoftware;
     private Button mBtnHardware;
+    private TextView mTvVersion;
 
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -105,6 +106,7 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
         }
 
         initView();
+        mBtnTestClose.setEnabled(false);
     }
 
     @Override
@@ -195,6 +197,8 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
         mBtnSoftware.setOnClickListener(this);
         mBtnHardware = findViewById(R.id.btn_hardware);
         mBtnHardware.setOnClickListener(this);
+        mTvVersion = findViewById(R.id.tv_version);
+        mTvVersion.setText("V" + getVerName(getApplicationContext()));
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -212,6 +216,7 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
                 mDeviceName.setText("Name：" + MyApp.name);
                 mIvOn.setVisibility(View.VISIBLE);
             } else {
+                testClose();
                 mLl.setVisibility(View.GONE);
                 Log.d("ZM_connect", "隐藏连接按键");
                 mIvOn.setVisibility(View.GONE);
@@ -324,32 +329,25 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
                     break;
 
                 case R.id.btn_test:
-                    mBtnScan.setEnabled(false);
-                    mBtnLength.setEnabled(false);
-                    mBtnWeight.setEnabled(false);
-                    mBtnHeight.setEnabled(false);
-                    mBtnWidth.setEnabled(false);
-                    mBtnSoftware.setEnabled(false);
-                    mBtnHardware.setEnabled(false);
-                    mBtnFengming.setEnabled(false);
-                    mBtnClose.setEnabled(false);
-                    mBtnTest.setEnabled(false);
-                    mBtnTestClose.setEnabled(true);
-                    test();
+                    boolean b = test();
+                    if (b) {
+                        mBtnScan.setEnabled(false);
+                        mBtnLength.setEnabled(false);
+                        mBtnWeight.setEnabled(false);
+                        mBtnHeight.setEnabled(false);
+                        mBtnWidth.setEnabled(false);
+                        mBtnSoftware.setEnabled(false);
+                        mBtnHardware.setEnabled(false);
+                        mBtnFengming.setEnabled(false);
+                        mBtnClose.setEnabled(false);
+                        mBtnTest.setEnabled(false);
+                        mBtnTestClose.setEnabled(true);
+                    }
+
                     break;
 
                 case R.id.btn_test_close:
-                    mBtnScan.setEnabled(true);
-                    mBtnLength.setEnabled(true);
-                    mBtnWeight.setEnabled(true);
-                    mBtnHeight.setEnabled(true);
-                    mBtnWidth.setEnabled(true);
-                    mBtnSoftware.setEnabled(true);
-                    mBtnHardware.setEnabled(true);
-                    mBtnFengming.setEnabled(true);
-                    mBtnClose.setEnabled(true);
-                    mBtnTest.setEnabled(true);
-                    mBtnTestClose.setEnabled(false);
+                    testClose();
                     break;
 
                 case R.id.btn_close:
@@ -367,10 +365,25 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
 
     }
 
+    private void testClose() {
+        isTest = false;
+        mBtnScan.setEnabled(true);
+        mBtnLength.setEnabled(true);
+        mBtnWeight.setEnabled(true);
+        mBtnHeight.setEnabled(true);
+        mBtnWidth.setEnabled(true);
+        mBtnSoftware.setEnabled(true);
+        mBtnHardware.setEnabled(true);
+        mBtnFengming.setEnabled(true);
+        mBtnClose.setEnabled(true);
+        mBtnTest.setEnabled(true);
+        mBtnTestClose.setEnabled(false);
+    }
+
     /**
      * 启动测试
      */
-    private void test() {
+    private boolean test() {
         queue = new LinkedList<Integer>();
         isTest = true;
 
@@ -394,7 +407,16 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
         boolean checked = mCbScan.isChecked();
         if (checked) {
             startScanAct();
+        } else {
+            if (queue.size() != 0) {
+                doLoop();
+            } else {
+                Toast.makeText(this, "请先勾选需要启动的测量模式", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
         }
+        return true;
     }
 
     private void startScanAct() {
@@ -446,4 +468,23 @@ public class MainActivity extends MVPBaseActivity<MainContract.View, MainPresent
             }
         }
     };
+
+
+    /**
+     * 得到软件显示版本信息
+     *
+     * @param context 上下文
+     * @return 当前版本信息
+     */
+    public static String getVerName(Context context) {
+        String verName = "";
+        try {
+            String packageName = context.getPackageName();
+            verName = context.getPackageManager()
+                    .getPackageInfo(packageName, 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return verName;
+    }
 }

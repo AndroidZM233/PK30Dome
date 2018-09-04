@@ -119,6 +119,7 @@ public class BaseBleApplication extends Application {
         if (mNotifyCharacteristic3 != null) {
 //            byte[] data = DataManageUtils.HexString2Bytes(s);//转十六进制
             mNotifyCharacteristic3.setValue(data);
+            Log.d("ZM", "信道3发出: " + DataManageUtils.bytesToHexString(data));
             mBluetoothLeService.wirteCharacteristic(mNotifyCharacteristic3);
         }
     }

@@ -3,7 +3,11 @@ package speedata.com.blelib.utils;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
 
 import speedata.com.blelib.base.BaseBleApplication;
 import speedata.com.blelib.service.BluetoothLeService;
@@ -38,27 +42,37 @@ public class PK30DataUtils {
      * @param bytes 数据
      */
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public static void analysisData(Context context, Intent intent, byte[] bytes) {
-        switch (bytes[1]) {
-            case 0x0A:
-                sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_L, "ffff");
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8A, 0x01, 0x35, 0x00});
-                break;
-            case 0x0B:
-                sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_W, "ffff");
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8B, 0x01, 0x36, 0x00});
-                break;
-            case 0x0C:
-                sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_H, "ffff");
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8C, 0x01, 0x37, 0x00});
-                break;
-            case 0x0D:
-                sendBroadcast(4, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_G, "ffffffff");
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8D, 0x01, 0x38, 0x00});
-                break;
-            default:
-                break;
-        }
+    public static void analysisData(final Context context, final Intent intent, final byte[] bytes) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                switch (bytes[1]) {
+                    case 0x0A:
+                        BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8A, 0x01, 0x35, 0x00});
+                        SystemClock.sleep(300);
+                        sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_L, "ffff");
+                        break;
+                    case 0x0B:
+                        BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8B, 0x01, 0x36, 0x00});
+                        SystemClock.sleep(300);
+                        sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_W, "ffff");
+                        break;
+                    case 0x0C:
+                        BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8C, 0x01, 0x37, 0x00});
+                        SystemClock.sleep(300);
+                        sendBroadcast(2, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_H, "ffff");
+                        break;
+                    case 0x0D:
+                        BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xAA, (byte) 0x8D, 0x01, 0x38, 0x00});
+                        SystemClock.sleep(300);
+                        sendWeightBroadcast(4, context, intent, bytes, BluetoothLeService.NOTIFICATION_DATA_G);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }).start();
+
     }
 
 
@@ -66,16 +80,20 @@ public class PK30DataUtils {
     public static void replyError(byte[] bytes) {
         switch (bytes[1]) {
             case 0x0A:
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8A, 0x01, (byte) 0xE5, 0x00});
+//                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8A, 0x01, (byte) 0xE5, 0x00});
+                PK30DataUtils.setModel(0);
                 break;
             case 0x0B:
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8B, 0x01, (byte) 0xE6, 0x00});
+//                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8B, 0x01, (byte) 0xE6, 0x00});
+                PK30DataUtils.setModel(1);
                 break;
             case 0x0C:
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8C, 0x01, (byte) 0xE7, 0x00});
+//                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8C, 0x01, (byte) 0xE7, 0x00});
+                PK30DataUtils.setModel(2);
                 break;
             case 0x0D:
-                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8D, 0x01, (byte) 0xE8, 0x00});
+//                BaseBleApplication.writeCharacteristic3(new byte[]{(byte) 0xFF, (byte) 0x8D, 0x01, (byte) 0xE8, 0x00});
+                PK30DataUtils.setModel(3);
                 break;
             default:
                 break;
@@ -252,9 +270,10 @@ public class PK30DataUtils {
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public static void fengMing(int time) {
         String timeHex = DataManageUtils.IntToHex(time);
+        byte[] timeBytes = StringUtils.hexStringToByteArray(timeHex);
         String jiaoYan = DataManageUtils.getJiaoYan("08", timeHex);
         byte[] jiaoyanBytes = StringUtils.hexStringToByteArray(jiaoYan);
-        byte[] concatAll = ByteUtils.concatAll(new byte[]{(byte) 0xAA, 0x59, 0x04, (byte) 0x03, 0x01, 0x00}, jiaoyanBytes, new byte[]{0x00});
+        byte[] concatAll = ByteUtils.concatAll(new byte[]{(byte) 0xAA, 0x59, 0x04}, timeBytes, new byte[]{0x01, 0x00}, jiaoyanBytes, new byte[]{0x00});
         BaseBleApplication.writeCharacteristic3(concatAll);
     }
 
@@ -304,6 +323,45 @@ public class PK30DataUtils {
             double resultDouble = (double) l / 10;
             data = resultDouble + "";
         }
+        intent.putExtra(intentName, data);
+        context.sendBroadcast(intent);
+    }
+
+
+    /**
+     * 重量数据发出
+     *
+     * @param length     数据截取长度
+     * @param context    context
+     * @param intent     intent
+     * @param bytes      数据
+     * @param intentName intentName
+     */
+    private static void sendWeightBroadcast(int length, Context context, Intent intent, byte[] bytes, String intentName) {
+        String data = "";
+        byte[] result = new byte[length];
+        try {
+            System.arraycopy(bytes, 3, result, 0, length);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        String byteArrayToString = DataManageUtils.byteArrayToString(result);
+        String fuHao = byteArrayToString.substring(0, 2);
+        String weight = byteArrayToString.substring(2, 6);
+//        String xiShu = byteArrayToString.substring(6);
+        BigInteger weightB = new BigInteger(weight, 16);
+//        BigInteger xiShuB = new BigInteger(xiShu, 16);
+        int weightInt = weightB.intValue();
+//        int xiShuInt = xiShuB.intValue();
+        double f1 = (double) weightInt  / 100;
+        BigDecimal b = new BigDecimal(f1);
+        double resultDouble = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
+        if (fuHao.equals("01")) {
+            data = "-" + resultDouble;
+        } else {
+            data = resultDouble + "";
+        }
+
         intent.putExtra(intentName, data);
         context.sendBroadcast(intent);
     }
